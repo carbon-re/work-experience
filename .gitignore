@@ -1,3 +1,4 @@
+# Archives and binaries
 *.tar
 *.tar.*
 *.jar
@@ -11,4 +12,26 @@
 *.sig
 
 pkg/
-src/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Pants
+/.pants.d/
+/dist/
+/.pids
+/.pants.workdir.file_lock*
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.tfstate.lock.info
+
+# Secrets - never commit ClickHouse or AWS credentials
+.env
+*.pem

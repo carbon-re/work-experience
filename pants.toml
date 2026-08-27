@@ -1,0 +1,32 @@
+[GLOBAL]
+pants_version = "2.31.0"
+backend_packages = [
+  "pants.backend.python",
+  "pants.backend.experimental.python.lint.ruff.check",
+  "pants.backend.experimental.python.lint.ruff.format",
+]
+# Fail loudly if a BUILD file references a file that doesn't exist.
+unmatched_build_file_globs = "error"
+
+[anonymous-telemetry]
+enabled = false
+
+[source]
+root_patterns = ["/"]
+
+[python]
+interpreter_constraints = ["==3.11.*"]
+enable_resolves = true
+default_resolve = "python-default"
+
+[python.resolves]
+python-default = "lockfiles/python-default.lock"
+
+[python-infer]
+use_rust_parser = true
+
+[test]
+output = "all"
+
+[cli.alias]
+green = "fmt lint test ::"

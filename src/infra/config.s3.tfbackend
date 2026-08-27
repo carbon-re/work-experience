@@ -1,0 +1,4 @@
+bucket="tfstate-backend-345594584316"
+key="interview"
+dynamodb_table="tfstate-lock-345594584316"
+region="eu-west-2"
