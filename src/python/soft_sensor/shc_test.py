@@ -4,8 +4,8 @@ import typing
 
 import pandas as pd
 
-from src.python.soft_sensors import SoftSensor
-from src.python.soft_sensors.shc import ShcSoftSensor
+from src.python.soft_sensor import SoftSensor
+from src.python.soft_sensor.shc import ShcSoftSensor
 
 
 def test_shc():

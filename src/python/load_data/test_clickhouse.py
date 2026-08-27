@@ -2,7 +2,7 @@ import datetime as dt
 
 import pytest
 
-from src.python.data.clickhouse import ClickHouseConfig, PlantDataLoader
+from src.python.load_data.clickhouse import ClickHouseConfig, PlantDataLoader
 
 A_CONFIG = ClickHouseConfig(
     host="localhost",
