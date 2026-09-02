@@ -81,7 +81,7 @@ class PlantDataLoader:
         ) as client:
             return client.query_df(query, parameters={"start": start, "end": end})
 
-    def _build_query(self, table: str, features: list[str]) -> str:
+    def _build_query(self, table: str, features: list[str]  ) -> str:
         columns = ", ".join(["timestamp", *features])
         return (
             f"SELECT {columns} FROM {table} "

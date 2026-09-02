@@ -5,5 +5,5 @@
 # See Step 1 in the README.
 
 brew "pyenv"
-brew "pantsbuild/tap/pants"
+brew "pantsbuild/tap", trusted: true
 brew "node"
