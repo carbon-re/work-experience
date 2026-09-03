@@ -35,8 +35,12 @@ def run(list_of_dfs: pd.DataFrame) -> tuple[list, list, list, list]:
 
 
 def plot_scatter(a, b):
-    plot = plt.scatter(a, b)
-    st.pyplot(plot)
+    fig, ax = plt.subplots()
+    ax.scatter(a, b)
+    ax.set_xlabel("Month")
+    ax.set_ylabel("MAE")
+    fig.autofmt_xdate()
+    st.pyplot(fig)
 
 def main():
     list_of_dfs = load_and_clean()
