@@ -72,3 +72,14 @@ def test_when_dashboard_runs_then_headline_metrics_carry_units():
 
     metric_values = [metric.value for metric in app.metric]
     assert any("kcal/kg" in value for value in metric_values)
+
+
+def test_when_dashboard_runs_then_draws_six_plotly_charts():
+    """Tripwire: all six charts must be plotly figures, not another library.
+
+    `AppTest` has no typed `plotly_chart` accessor, so go via `get()`, which
+    looks the elements up by their proto name.
+    """
+    app = _run_app()
+
+    assert len(list(app.get("plotly_chart"))) == 6

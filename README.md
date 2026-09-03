@@ -155,7 +155,9 @@ Outputs of All Cells* to keep the changes smaller.
 
 A dashboard is how you show your model's results to someone else. We use
 [Streamlit](https://streamlit.io): you write normal Python, and it becomes a
-web page.
+web page. The charts themselves are drawn with
+[Plotly](https://plotly.com/python/plotly-express/), so they are interactive
+out of the box -- hover for values, drag to zoom, double-click to reset.
 
 There is a fully worked example to read and play with:
 

@@ -287,8 +287,7 @@ def _show_monthly_errors(results: plant_data.ModelResults) -> None:
     )
     figure.update_traces(
         hovertemplate=(
-            "%{x|%b %Y}<br>MAE %{y:.1f} kcal/kg"
-            "<br>%{customdata[0]:,} rows<extra></extra>"
+            "%{x|%b %Y}<br>MAE %{y:.1f} kcal/kg<br>%{customdata[0]:,} rows<extra></extra>"
         )
     )
     _style(figure, y_title="MAE (kcal/kg)", x_title="Month")
@@ -428,9 +427,7 @@ def _show_correlation_heatmap(data: pd.DataFrame) -> None:
         text_auto=".2f",
         aspect="auto",
     )
-    figure.update_traces(
-        hovertemplate="%{y}<br>vs %{x}<br>Correlation %{z:.2f}<extra></extra>"
-    )
+    figure.update_traces(hovertemplate="%{y}<br>vs %{x}<br>Correlation %{z:.2f}<extra></extra>")
     _style(figure, y_title="", x_title="")
     figure.update_layout(coloraxis_colorbar_title="Correlation")
     st.plotly_chart(figure, use_container_width=True)
