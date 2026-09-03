@@ -19,4 +19,7 @@ jupytext==1.16.6
 # Testing
 pytest==8.3.4
 
-streamlit
+# Dashboards - Phase 3. altair is streamlit's charting library, and gives us
+# axis/scale control that st.line_chart alone does not.
+streamlit==1.41.1
+altair==5.5.0

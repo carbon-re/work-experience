@@ -7,6 +7,8 @@ backend_packages = [
 ]
 # Fail loudly if a BUILD file references a file that doesn't exist.
 unmatched_build_file_globs = "error"
+# Makes our own macros (e.g. streamlit_dashboard) available in BUILD files.
+build_file_prelude_globs = ["pants-plugins/macros/*.py"]
 
 [anonymous-telemetry]
 enabled = false

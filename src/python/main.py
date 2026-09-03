@@ -10,9 +10,17 @@ from sklearn.model_selection import train_test_split
 from src.python.load_data.clickhouse import ClickHouseConfig, PlantDataLoader
 import datetime as dt
 
-features = ["f_k_coal_tput",'p_k_torque',"g_k_pyro_temp","p_c_grate_speed", "g_ph_cy4_gol_temp",'g_ph_cy3_gol_temp']
+features = [
+    "f_k_coal_tput",
+    "p_k_torque",
+    "g_k_pyro_temp",
+    "p_c_grate_speed",
+    "g_ph_cy4_gol_temp",
+    "g_ph_cy3_gol_temp",
+]
 target = "p_k_power"
 columns_to_load = features + [target]
+
 
 def data_load():
     loader = PlantDataLoader(ClickHouseConfig.from_environment())
@@ -25,24 +33,22 @@ def data_load():
 
     return data
 
+
 def cleaning(data: pd.DataFrame) -> pd.DataFrame:
     data = data.fillna(0)
     return data
 
+
 def sliced_data(data: pd.DataFrame) -> list[pd.DataFrame]:
-    data['month'] = data['timestamp'].dt.to_period("M")
-    list_of_dataframes = [group for _, group in data.groupby('month')]
+    data["month"] = data["timestamp"].dt.to_period("M")
+    list_of_dataframes = [group for _, group in data.groupby("month")]
     return list_of_dataframes
-
-
 
 
 def train_model(data: pd.DataFrame) -> LinearRegression:
     X = data[features]
     y = data[target]
-    X_train, X_test, y_train, y_test = train_test_split(
-         X, y, test_size=0.2, shuffle=False
-    )
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
     model = LinearRegression()
     model.fit(X_train, y_train)
     print(X_train.head())
@@ -50,7 +56,8 @@ def train_model(data: pd.DataFrame) -> LinearRegression:
     print(y_train.head())
     return model, X_test, y_test
 
-def analysisData(X_test, y_test,model) -> pd.DataFrame:
+
+def analysisData(X_test, y_test, model) -> pd.DataFrame:
     predictions = model.predict(X_test)
     MAE = mean_absolute_error(y_test, predictions)
     print(f"Mean absolute error: {MAE} kcal/kg")
@@ -83,6 +90,7 @@ def analysisData(X_test, y_test,model) -> pd.DataFrame:
 
     return predictions, MAE
 
+
 if __name__ == "__main__":
     data = data_load()
     data = cleaning(data)
@@ -95,7 +103,7 @@ if __name__ == "__main__":
         model, X_test, y_test = train_model(data)
         predictions, MAE = analysisData(X_test, y_test, model=model)
         MAEs.append(MAE)
-        list_of_months.append(data['month'].iloc[0])
+        list_of_months.append(data["month"].iloc[0])
 
     x_values = [m.to_timestamp() for m in list_of_months]
 
@@ -107,6 +115,3 @@ if __name__ == "__main__":
     plt.ylabel("MAE")
     plt.title("MAEs vs Month")
     plt.show()
-
-
-
