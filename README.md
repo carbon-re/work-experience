@@ -151,6 +151,81 @@ One thing to know: `.ipynb` files are stored as JSON, so git changes to them
 are hard to read. Before committing, use *Kernel -> Restart Kernel and Clear
 Outputs of All Cells* to keep the changes smaller.
 
+## Dashboards
+
+A dashboard is how you show your model's results to someone else. We use
+[Streamlit](https://streamlit.io): you write normal Python, and it becomes a
+web page.
+
+There is a fully worked example to read and play with:
+
+```bash
+pants run src/python/dashboards:example
+```
+
+That opens a page with six kinds of chart -- line, scatter, bar, histogram,
+horizontal bar and heatmap. Each one has a note explaining **what it shows**
+and **when to use it**, plus a section on the traps (truncated bar axes, dual
+y-axes, pie charts) that catch everyone at least once.
+
+Change something in `src/python/dashboards/example/app.py`, save, and the page
+reloads. That is the fastest way to learn what each chart setting does.
+
+### Plugging in your own model
+
+The dashboard does **not** load data or train models. It is handed **pandas
+DataFrames that already exist in memory** and just draws them. Your training
+code keeps ownership of loading and fitting; the dashboard only draws.
+
+So once your model works, you do not rewrite the charts. You build two
+DataFrames and pass them to `build_results`:
+
+| DataFrame             | Columns                          |
+| --------------------- | -------------------------------- |
+| `predictions`         | `timestamp`, `actual`, `predicted` |
+| `feature_importances` | `feature`, `importance`          |
+
+```python
+import pandas as pd
+from src.python.dashboards.example import plant_data
+
+model, x_test, y_test = train_model(data)   # your existing code
+
+results = plant_data.build_results(
+    predictions=pd.DataFrame(
+        {
+            "timestamp": data.loc[x_test.index, "timestamp"],
+            "actual": y_test,
+            "predicted": model.predict(x_test),
+        }
+    ),
+    feature_importances=pd.DataFrame(
+        {"feature": features, "importance": abs(model.coef_)}
+    ),
+    train_row_count=len(data) - len(x_test),
+)
+```
+
+`build_results` works out the rest -- the error column, the per-month summary,
+MAE, RMSE and R². Nothing is written to disk. The "Using your own DataFrames"
+section at the bottom of the example page explains why that matters.
+
+The example reads the sample CSVs in `src/infra/plant-data/` only so it has
+something to show without ClickHouse credentials. That is the one piece you
+would replace with your own `data_load()`.
+
+### Adding your own dashboard
+
+Make a directory with an `app.py`, then add to its `BUILD` file:
+
+```python
+streamlit_dashboard(name="my_dashboard", entrypoint="my_dashboard/app.py")
+```
+
+`streamlit_dashboard` is our own macro (in `pants-plugins/macros/`), which is
+why `pants run` knows how to start a Streamlit app. Run it with
+`pants run src/python/dashboards:my_dashboard`.
+
 ## Layout
 
 ```text
@@ -158,6 +233,8 @@ Outputs of All Cells* to keep the changes smaller.
 lockfiles/           Pinned dependency versions - generated, don't edit by hand
 src/python/load_data/     Phase 1: loading plant data from ClickHouse
 src/python/soft_sensors/  Phase 2: the SHC model
+src/python/dashboards/    Phase 3: Streamlit dashboards
+pants-plugins/macros/     Our own pants macros (e.g. streamlit_dashboard)
 src/infra/           Terraform: cloud infrastructure
 ```
 
