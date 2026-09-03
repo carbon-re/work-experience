@@ -12,6 +12,12 @@ How Streamlit works, in one paragraph: this file is a *script*, top to bottom.
 Streamlit runs the whole thing again from the start every time you touch a
 widget. That is why there are no callbacks or event handlers -- a slider just
 returns its current value, and the code below it runs again with the new one.
+
+The charts are drawn with **plotly**, via `plotly.express` (imported as `px`).
+Every `px` call returns a `Figure`, which you can keep tweaking with
+`update_traces` and `update_layout` before handing it to `st.plotly_chart`.
+Charts are interactive for free: hover for values, drag to zoom, double-click
+to reset.
 """
 
 import pandas as pd
@@ -359,23 +365,26 @@ def _show_feature_importances(results: plant_data.ModelResults) -> None:
     """Horizontal bar chart: ranked categories with long labels."""
     st.subheader("5. Horizontal bar chart - what the model relies on")
 
-    chart = (
-        alt.Chart(results.feature_importances)
-        .mark_bar(color=GOOD_COLOUR)
-        .encode(
-            # Horizontal because feature names are long. Rotated labels on a
-            # vertical chart are a reliable sign the chart wanted to be
-            # horizontal all along.
-            x=alt.X("importance:Q", title="Relative importance"),
-            y=alt.Y("feature:N", title="", sort="-x"),
-            tooltip=[
-                alt.Tooltip("feature:N", title="Feature"),
-                alt.Tooltip("importance:Q", title="Importance", format=".3f"),
-            ],
-        )
-        .properties(height=max(CHART_HEIGHT - 100, 40 * len(results.feature_importances)))
+    figure = px.bar(
+        results.feature_importances,
+        x="importance",
+        # Horizontal because feature names are long. Rotated labels on a
+        # vertical chart are a reliable sign the chart wanted to be horizontal
+        # all along.
+        y="feature",
+        orientation="h",
+        color_discrete_sequence=[GOOD_COLOUR],
     )
-    st.altair_chart(chart, use_container_width=True)
+    figure.update_traces(hovertemplate="%{y}<br>Importance %{x:.3f}<extra></extra>")
+    _style(figure, y_title="", x_title="Relative importance")
+    figure.update_layout(
+        height=max(CHART_HEIGHT - 100, 40 * len(results.feature_importances)),
+        # build_results sorts largest-first, but plotly draws the first row at
+        # the bottom of a horizontal bar chart. Reversing the axis puts the
+        # biggest bar on top, where the eye starts.
+        yaxis=dict(autorange="reversed"),
+    )
+    st.plotly_chart(figure, use_container_width=True)
 
     _explain(
         shows=(
@@ -388,7 +397,8 @@ def _show_feature_importances(results: plant_data.ModelResults) -> None:
         ),
         practice=(
             "**Go horizontal when labels are long**, and **sort by value** so "
-            "the ranking is instant (`sort='-x'` does it here). Importance is "
+            "the ranking is instant (sorted upstream, then the y-axis is "
+            "reversed so the biggest bar sits on top). Importance is "
             "about correlation, not causation -- it tells you what the model "
             "used, not what drives the plant. Two features that measure nearly "
             "the same thing will split their importance between them and both "
@@ -402,36 +412,28 @@ def _show_correlation_heatmap(data: pd.DataFrame) -> None:
     st.subheader("6. Heatmap - how the inputs relate to each other")
 
     columns = plant_data.fuel_columns(data) + ["s_ph_sil_tput", plant_data.TARGET]
-    correlations = (
-        data[columns]
-        .corr()
-        .stack()
-        .reset_index()
-        .set_axis(["first_feature", "second_feature", "correlation"], axis=1)
-    )
+    correlations = data[columns].corr()
 
-    chart = (
-        alt.Chart(correlations)
-        .mark_rect()
-        .encode(
-            x=alt.X("first_feature:N", title=""),
-            y=alt.Y("second_feature:N", title=""),
-            # Diverging scale anchored at 0: correlation runs -1..+1 and the
-            # sign matters, so the midpoint must be visually neutral.
-            color=alt.Color(
-                "correlation:Q",
-                scale=alt.Scale(scheme="redblue", domain=[-1, 1], reverse=True),
-                title="Correlation",
-            ),
-            tooltip=[
-                alt.Tooltip("first_feature:N", title="Feature"),
-                alt.Tooltip("second_feature:N", title="vs"),
-                alt.Tooltip("correlation:Q", title="Correlation", format=".2f"),
-            ],
-        )
-        .properties(height=CHART_HEIGHT)
+    figure = px.imshow(
+        correlations,
+        # Diverging scale anchored at 0: correlation runs -1..+1 and the sign
+        # matters, so the midpoint must be visually neutral. zmin/zmax pin the
+        # ends, otherwise plotly scales to whatever range this plant happens
+        # to have and the colours mean something different per plant.
+        color_continuous_scale="RdBu_r",
+        zmin=-1,
+        zmax=1,
+        # A heatmap shows patterns well and precise values badly, so print the
+        # number in each cell as well.
+        text_auto=".2f",
+        aspect="auto",
     )
-    st.altair_chart(chart, use_container_width=True)
+    figure.update_traces(
+        hovertemplate="%{y}<br>vs %{x}<br>Correlation %{z:.2f}<extra></extra>"
+    )
+    _style(figure, y_title="", x_title="")
+    figure.update_layout(coloraxis_colorbar_title="Correlation")
+    st.plotly_chart(figure, use_container_width=True)
 
     _explain(
         shows=(

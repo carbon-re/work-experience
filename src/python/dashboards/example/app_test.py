@@ -3,7 +3,7 @@
 Importing `app.py` runs the whole Streamlit script, because that is how
 Streamlit works -- the module body *is* the page. Running it here under
 `streamlit.testing` catches the errors that a plain import would not: a bad
-Altair encoding, a column that only exists for some plants, a chart that
+plotly figure spec, a column that only exists for some plants, a chart that
 breaks when a plant's test split lands inside one month.
 """
 
