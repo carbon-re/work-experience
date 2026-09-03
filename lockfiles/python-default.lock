@@ -9,13 +9,13 @@
 //     "CPython==3.11.*"
 //   ],
 //   "generated_with_requirements": [
+//     "altair==5.5.0",
 //     "clickhouse-connect==0.8.11",
 //     "jupyterlab==4.3.4",
 //     "jupytext==1.16.6",
 //     "matplotlib==3.9.3",
 //     "numpy==2.1.3",
 //     "pandas==2.2.3",
-//     "plotly==5.24.1",
 //     "pytest==8.3.4",
 //     "scikit-learn==1.5.2",
 //     "streamlit==1.41.1"
@@ -3069,27 +3069,6 @@
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "f67073a1e637eb0dc3e46324d9d51e2fe76e9727c892dde64ddf1e1b51f29089",
-              "url": "https://files.pythonhosted.org/packages/e5/ae/580600f441f6fc05218bd6c9d5794f4aef072a7d9093b291f1c50a9db8bc/plotly-5.24.1-py3-none-any.whl"
-            },
-            {
-              "algorithm": "sha256",
-              "hash": "dbc8ac8339d248a4bcc36e08a5659bacfe1b079390b8953533f4eb22169b4bae",
-              "url": "https://files.pythonhosted.org/packages/79/4f/428f6d959818d7425a94c190a6b26fbc58035cbef40bf249be0b62a9aedd/plotly-5.24.1.tar.gz"
-            }
-          ],
-          "project_name": "plotly",
-          "requires_dists": [
-            "packaging",
-            "tenacity>=6.2.0"
-          ],
-          "requires_python": ">=3.8",
-          "version": "5.24.1"
-        },
-        {
-          "artifacts": [
-            {
-              "algorithm": "sha256",
               "hash": "e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746",
               "url": "https://files.pythonhosted.org/packages/54/20/4d324d65cc6d9205fabedc306948156824eb9f0ee1633355a8f7ec5c66bf/pluggy-1.6.0-py3-none-any.whl"
             },
@@ -4788,13 +4767,13 @@
   "pip_version": "24.2",
   "prefer_older_binary": false,
   "requirements": [
+    "altair==5.5.0",
     "clickhouse-connect==0.8.11",
     "jupyterlab==4.3.4",
     "jupytext==1.16.6",
     "matplotlib==3.9.3",
     "numpy==2.1.3",
     "pandas==2.2.3",
-    "plotly==5.24.1",
     "pytest==8.3.4",
     "scikit-learn==1.5.2",
     "streamlit==1.41.1"

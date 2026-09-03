@@ -12,17 +12,10 @@ How Streamlit works, in one paragraph: this file is a *script*, top to bottom.
 Streamlit runs the whole thing again from the start every time you touch a
 widget. That is why there are no callbacks or event handlers -- a slider just
 returns its current value, and the code below it runs again with the new one.
-
-The charts are drawn with **plotly**, via `plotly.express` (imported as `px`).
-Every `px` call returns a `Figure`, which you can keep tweaking with
-`update_traces` and `update_layout` before handing it to `st.plotly_chart`.
-Charts are interactive for free: hover for values, drag to zoom, double-click
-to reset.
 """
 
+import altair as alt
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
 import streamlit as st
 
 from src.python.dashboards.example import plant_data
@@ -36,30 +29,7 @@ GOOD_COLOUR = "#3E8E7E"
 
 CHART_HEIGHT = 320
 
-# Plotly's default template draws a grey backdrop and heavy gridlines. A light
-# template with faint gridlines keeps the data as the most visible thing on
-# the chart, which is the whole point.
-CHART_TEMPLATE = "plotly_white"
-
 st.set_page_config(page_title="SHC dashboard example", page_icon="🏭", layout="wide")
-
-
-def _style(figure: go.Figure, y_title: str, x_title: str = "") -> go.Figure:
-    """Apply the same layout to every chart on the page.
-
-    Doing this in one place is what makes six charts look like one dashboard
-    rather than six screenshots from different tools.
-    """
-    figure.update_layout(
-        template=CHART_TEMPLATE,
-        height=CHART_HEIGHT,
-        xaxis_title=x_title,
-        yaxis_title=y_title,
-        margin=dict(l=10, r=10, t=30, b=10),
-        legend=dict(orientation="h", yanchor="bottom", y=1.0, x=0),
-        hovermode="x unified",
-    )
-    return figure
 
 
 def main() -> None:
@@ -168,22 +138,33 @@ def _show_time_series(data: pd.DataFrame, results: plant_data.ModelResults) -> N
         value_name="shc",
     )
 
-    figure = px.line(
-        plotted,
-        x="timestamp",
-        y="shc",
-        color="series",
-        # Naming the colours explicitly, rather than taking plotly's defaults,
-        # keeps "actual" the same grey in every chart on the page.
-        color_discrete_map={"actual": ACTUAL_COLOUR, "predicted": PREDICTED_COLOUR},
-        labels={"shc": "SHC (kcal/kg)", "timestamp": "Time", "series": ""},
+    chart = (
+        alt.Chart(plotted)
+        .mark_line(opacity=0.85)
+        .encode(
+            x=alt.X("timestamp:T", title="Time"),
+            # zero=False matters: SHC sits around 800 kcal/kg, so forcing the
+            # axis to start at 0 would squash all the interesting variation
+            # into a thin band at the top.
+            y=alt.Y("shc:Q", title="SHC (kcal/kg)", scale=alt.Scale(zero=False)),
+            color=alt.Color(
+                "series:N",
+                title="",
+                scale=alt.Scale(
+                    domain=["actual", "predicted"],
+                    range=[ACTUAL_COLOUR, PREDICTED_COLOUR],
+                ),
+            ),
+            tooltip=[
+                alt.Tooltip("timestamp:T", title="Time"),
+                alt.Tooltip("series:N", title="Series"),
+                alt.Tooltip("shc:Q", title="SHC", format=".1f"),
+            ],
+        )
+        .properties(height=CHART_HEIGHT)
+        .interactive()
     )
-    figure.update_traces(opacity=0.85, hovertemplate="%{y:.1f} kcal/kg")
-    # Plotly does not force a zero baseline on a line chart, which is what we
-    # want here: SHC sits around 800 kcal/kg, so a zero-based axis would
-    # squash all the interesting variation into a thin band at the top.
-    _style(figure, y_title="SHC (kcal/kg)", x_title="Time")
-    st.plotly_chart(figure, use_container_width=True)
+    st.altair_chart(chart, use_container_width=True)
 
     _explain(
         shows=(
@@ -211,41 +192,33 @@ def _show_scatter(results: plant_data.ModelResults) -> None:
     predictions = results.predictions
     lowest = float(min(predictions["actual"].min(), predictions["predicted"].min()))
     highest = float(max(predictions["actual"].max(), predictions["predicted"].max()))
+    limits = alt.Scale(domain=[lowest, highest])
 
-    figure = px.scatter(
-        predictions,
-        x="actual",
-        y="predicted",
-        opacity=0.35,
-        color_discrete_sequence=[PREDICTED_COLOUR],
-        custom_data=["timestamp"],
+    points = (
+        alt.Chart(predictions)
+        .mark_circle(size=45, opacity=0.35, color=PREDICTED_COLOUR)
+        .encode(
+            x=alt.X("actual:Q", title="Actual SHC (kcal/kg)", scale=limits),
+            y=alt.Y("predicted:Q", title="Predicted SHC (kcal/kg)", scale=limits),
+            tooltip=[
+                alt.Tooltip("timestamp:T", title="Time"),
+                alt.Tooltip("actual:Q", title="Actual", format=".1f"),
+                alt.Tooltip("predicted:Q", title="Predicted", format=".1f"),
+            ],
+        )
     )
-    figure.update_traces(
-        marker=dict(size=7),
-        hovertemplate=(
-            "Actual %{x:.1f} kcal/kg<br>Predicted %{y:.1f} kcal/kg"
-            "<br>%{customdata[0]|%Y-%m-%d %H:%M}<extra></extra>"
-        ),
+    # A perfect model puts every point on this line, so it is the reference
+    # the eye needs. A scatter of predictions without it is much harder to read.
+    perfect = (
+        alt.Chart(pd.DataFrame({"value": [lowest, highest]}))
+        .mark_line(strokeDash=[6, 4], color=ACTUAL_COLOUR)
+        .encode(x=alt.X("value:Q", scale=limits), y=alt.Y("value:Q", scale=limits))
     )
-    # A perfect model puts every point on this line, so it is the reference the
-    # eye needs. A scatter of predictions without it is much harder to read.
-    figure.add_shape(
-        type="line",
-        x0=lowest,
-        y0=lowest,
-        x1=highest,
-        y1=highest,
-        line=dict(color=ACTUAL_COLOUR, dash="dash", width=2),
+
+    st.altair_chart(
+        (points + perfect).properties(height=CHART_HEIGHT).interactive(),
+        use_container_width=True,
     )
-    _style(figure, y_title="Predicted SHC (kcal/kg)", x_title="Actual SHC (kcal/kg)")
-    # Identical ranges on both axes, so the reference line sits at a true 45
-    # degrees. Without this the eye is being lied to.
-    figure.update_layout(
-        xaxis_range=[lowest, highest],
-        yaxis_range=[lowest, highest],
-        hovermode="closest",
-    )
-    st.plotly_chart(figure, use_container_width=True)
 
     _explain(
         shows=(
@@ -278,24 +251,23 @@ def _show_monthly_errors(results: plant_data.ModelResults) -> None:
         )
         return
 
-    figure = px.bar(
-        monthly,
-        x="month",
-        y="mae",
-        color_discrete_sequence=[PREDICTED_COLOUR],
-        custom_data=["sample_count"],
-    )
-    figure.update_traces(
-        hovertemplate=(
-            "%{x|%b %Y}<br>MAE %{y:.1f} kcal/kg<br>%{customdata[0]:,} rows<extra></extra>"
+    chart = (
+        alt.Chart(monthly)
+        .mark_bar(color=PREDICTED_COLOUR)
+        .encode(
+            x=alt.X("month:T", title="Month"),
+            # Bars must start at zero. Their length is the message, and a
+            # truncated axis makes small differences look enormous.
+            y=alt.Y("mae:Q", title="MAE (kcal/kg)", scale=alt.Scale(zero=True)),
+            tooltip=[
+                alt.Tooltip("month:T", title="Month", format="%b %Y"),
+                alt.Tooltip("mae:Q", title="MAE", format=".1f"),
+                alt.Tooltip("sample_count:Q", title="Rows"),
+            ],
         )
+        .properties(height=CHART_HEIGHT)
     )
-    _style(figure, y_title="MAE (kcal/kg)", x_title="Month")
-    # Bars must start at zero. Their length is the message, and a truncated
-    # axis makes small differences look enormous. Plotly does this by default
-    # for bars, but say it explicitly so nobody "tidies" it away later.
-    figure.update_layout(yaxis_rangemode="tozero")
-    st.plotly_chart(figure, use_container_width=True)
+    st.altair_chart(chart, use_container_width=True)
 
     _explain(
         shows=(
@@ -322,23 +294,21 @@ def _show_error_histogram(results: plant_data.ModelResults) -> None:
 
     bin_count = st.slider("Number of bins", min_value=10, max_value=80, value=40)
 
-    figure = px.histogram(
-        results.predictions,
-        x="error",
-        nbins=bin_count,
-        color_discrete_sequence=[PREDICTED_COLOUR],
-        opacity=0.85,
+    chart = (
+        alt.Chart(results.predictions)
+        .mark_bar(color=PREDICTED_COLOUR, opacity=0.85)
+        .encode(
+            x=alt.X(
+                "error:Q",
+                bin=alt.Bin(maxbins=bin_count),
+                title="Prediction error (kcal/kg)  -  negative = under-predicted",
+            ),
+            y=alt.Y("count():Q", title="Number of rows"),
+            tooltip=[alt.Tooltip("count():Q", title="Rows")],
+        )
+        .properties(height=CHART_HEIGHT)
     )
-    figure.update_traces(hovertemplate="Error %{x:.0f} kcal/kg<br>%{y} rows<extra></extra>")
-    _style(
-        figure,
-        y_title="Number of rows",
-        x_title="Prediction error (kcal/kg)  -  negative = under-predicted",
-    )
-    # A line at zero error: without it, a distribution sitting slightly off
-    # centre looks centred.
-    figure.add_vline(x=0, line=dict(color=ACTUAL_COLOUR, dash="dash", width=2))
-    st.plotly_chart(figure, use_container_width=True)
+    st.altair_chart(chart, use_container_width=True)
 
     _explain(
         shows=(
@@ -364,26 +334,23 @@ def _show_feature_importances(results: plant_data.ModelResults) -> None:
     """Horizontal bar chart: ranked categories with long labels."""
     st.subheader("5. Horizontal bar chart - what the model relies on")
 
-    figure = px.bar(
-        results.feature_importances,
-        x="importance",
-        # Horizontal because feature names are long. Rotated labels on a
-        # vertical chart are a reliable sign the chart wanted to be horizontal
-        # all along.
-        y="feature",
-        orientation="h",
-        color_discrete_sequence=[GOOD_COLOUR],
+    chart = (
+        alt.Chart(results.feature_importances)
+        .mark_bar(color=GOOD_COLOUR)
+        .encode(
+            # Horizontal because feature names are long. Rotated labels on a
+            # vertical chart are a reliable sign the chart wanted to be
+            # horizontal all along.
+            x=alt.X("importance:Q", title="Relative importance"),
+            y=alt.Y("feature:N", title="", sort="-x"),
+            tooltip=[
+                alt.Tooltip("feature:N", title="Feature"),
+                alt.Tooltip("importance:Q", title="Importance", format=".3f"),
+            ],
+        )
+        .properties(height=max(CHART_HEIGHT - 100, 40 * len(results.feature_importances)))
     )
-    figure.update_traces(hovertemplate="%{y}<br>Importance %{x:.3f}<extra></extra>")
-    _style(figure, y_title="", x_title="Relative importance")
-    figure.update_layout(
-        height=max(CHART_HEIGHT - 100, 40 * len(results.feature_importances)),
-        # build_results sorts largest-first, but plotly draws the first row at
-        # the bottom of a horizontal bar chart. Reversing the axis puts the
-        # biggest bar on top, where the eye starts.
-        yaxis=dict(autorange="reversed"),
-    )
-    st.plotly_chart(figure, use_container_width=True)
+    st.altair_chart(chart, use_container_width=True)
 
     _explain(
         shows=(
@@ -396,8 +363,7 @@ def _show_feature_importances(results: plant_data.ModelResults) -> None:
         ),
         practice=(
             "**Go horizontal when labels are long**, and **sort by value** so "
-            "the ranking is instant (sorted upstream, then the y-axis is "
-            "reversed so the biggest bar sits on top). Importance is "
+            "the ranking is instant (`sort='-x'` does it here). Importance is "
             "about correlation, not causation -- it tells you what the model "
             "used, not what drives the plant. Two features that measure nearly "
             "the same thing will split their importance between them and both "
@@ -411,26 +377,36 @@ def _show_correlation_heatmap(data: pd.DataFrame) -> None:
     st.subheader("6. Heatmap - how the inputs relate to each other")
 
     columns = plant_data.fuel_columns(data) + ["s_ph_sil_tput", plant_data.TARGET]
-    correlations = data[columns].corr()
-
-    figure = px.imshow(
-        correlations,
-        # Diverging scale anchored at 0: correlation runs -1..+1 and the sign
-        # matters, so the midpoint must be visually neutral. zmin/zmax pin the
-        # ends, otherwise plotly scales to whatever range this plant happens
-        # to have and the colours mean something different per plant.
-        color_continuous_scale="RdBu_r",
-        zmin=-1,
-        zmax=1,
-        # A heatmap shows patterns well and precise values badly, so print the
-        # number in each cell as well.
-        text_auto=".2f",
-        aspect="auto",
+    correlations = (
+        data[columns]
+        .corr()
+        .stack()
+        .reset_index()
+        .set_axis(["first_feature", "second_feature", "correlation"], axis=1)
     )
-    figure.update_traces(hovertemplate="%{y}<br>vs %{x}<br>Correlation %{z:.2f}<extra></extra>")
-    _style(figure, y_title="", x_title="")
-    figure.update_layout(coloraxis_colorbar_title="Correlation")
-    st.plotly_chart(figure, use_container_width=True)
+
+    chart = (
+        alt.Chart(correlations)
+        .mark_rect()
+        .encode(
+            x=alt.X("first_feature:N", title=""),
+            y=alt.Y("second_feature:N", title=""),
+            # Diverging scale anchored at 0: correlation runs -1..+1 and the
+            # sign matters, so the midpoint must be visually neutral.
+            color=alt.Color(
+                "correlation:Q",
+                scale=alt.Scale(scheme="redblue", domain=[-1, 1], reverse=True),
+                title="Correlation",
+            ),
+            tooltip=[
+                alt.Tooltip("first_feature:N", title="Feature"),
+                alt.Tooltip("second_feature:N", title="vs"),
+                alt.Tooltip("correlation:Q", title="Correlation", format=".2f"),
+            ],
+        )
+        .properties(height=CHART_HEIGHT)
+    )
+    st.altair_chart(chart, use_container_width=True)
 
     _explain(
         shows=(

@@ -19,7 +19,7 @@ jupytext==1.16.6
 # Testing
 pytest==8.3.4
 
-# Dashboards - Phase 3. plotly draws the charts; it gives us interactive
-# hover, zoom and pan, plus the axis/scale control st.line_chart lacks.
+# Dashboards - Phase 3. altair is streamlit's charting library, and gives us
+# axis/scale control that st.line_chart alone does not.
 streamlit==1.41.1
-plotly==5.24.1
+altair==5.5.0

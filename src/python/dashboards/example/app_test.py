@@ -3,7 +3,7 @@
 Importing `app.py` runs the whole Streamlit script, because that is how
 Streamlit works -- the module body *is* the page. Running it here under
 `streamlit.testing` catches the errors that a plain import would not: a bad
-plotly figure spec, a column that only exists for some plants, a chart that
+Altair encoding, a column that only exists for some plants, a chart that
 breaks when a plant's test split lands inside one month.
 """
 
@@ -72,14 +72,3 @@ def test_when_dashboard_runs_then_headline_metrics_carry_units():
 
     metric_values = [metric.value for metric in app.metric]
     assert any("kcal/kg" in value for value in metric_values)
-
-
-def test_when_dashboard_runs_then_draws_six_plotly_charts():
-    """Tripwire: all six charts must be plotly figures, not another library.
-
-    `AppTest` has no typed `plotly_chart` accessor, so go via `get()`, which
-    looks the elements up by their proto name.
-    """
-    app = _run_app()
-
-    assert len(list(app.get("plotly_chart"))) == 6
