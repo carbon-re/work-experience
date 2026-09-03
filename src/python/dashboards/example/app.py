@@ -272,23 +272,25 @@ def _show_monthly_errors(results: plant_data.ModelResults) -> None:
         )
         return
 
-    chart = (
-        alt.Chart(monthly)
-        .mark_bar(color=PREDICTED_COLOUR)
-        .encode(
-            x=alt.X("month:T", title="Month"),
-            # Bars must start at zero. Their length is the message, and a
-            # truncated axis makes small differences look enormous.
-            y=alt.Y("mae:Q", title="MAE (kcal/kg)", scale=alt.Scale(zero=True)),
-            tooltip=[
-                alt.Tooltip("month:T", title="Month", format="%b %Y"),
-                alt.Tooltip("mae:Q", title="MAE", format=".1f"),
-                alt.Tooltip("sample_count:Q", title="Rows"),
-            ],
-        )
-        .properties(height=CHART_HEIGHT)
+    figure = px.bar(
+        monthly,
+        x="month",
+        y="mae",
+        color_discrete_sequence=[PREDICTED_COLOUR],
+        custom_data=["sample_count"],
     )
-    st.altair_chart(chart, use_container_width=True)
+    figure.update_traces(
+        hovertemplate=(
+            "%{x|%b %Y}<br>MAE %{y:.1f} kcal/kg"
+            "<br>%{customdata[0]:,} rows<extra></extra>"
+        )
+    )
+    _style(figure, y_title="MAE (kcal/kg)", x_title="Month")
+    # Bars must start at zero. Their length is the message, and a truncated
+    # axis makes small differences look enormous. Plotly does this by default
+    # for bars, but say it explicitly so nobody "tidies" it away later.
+    figure.update_layout(yaxis_rangemode="tozero")
+    st.plotly_chart(figure, use_container_width=True)
 
     _explain(
         shows=(
@@ -315,21 +317,23 @@ def _show_error_histogram(results: plant_data.ModelResults) -> None:
 
     bin_count = st.slider("Number of bins", min_value=10, max_value=80, value=40)
 
-    chart = (
-        alt.Chart(results.predictions)
-        .mark_bar(color=PREDICTED_COLOUR, opacity=0.85)
-        .encode(
-            x=alt.X(
-                "error:Q",
-                bin=alt.Bin(maxbins=bin_count),
-                title="Prediction error (kcal/kg)  -  negative = under-predicted",
-            ),
-            y=alt.Y("count():Q", title="Number of rows"),
-            tooltip=[alt.Tooltip("count():Q", title="Rows")],
-        )
-        .properties(height=CHART_HEIGHT)
+    figure = px.histogram(
+        results.predictions,
+        x="error",
+        nbins=bin_count,
+        color_discrete_sequence=[PREDICTED_COLOUR],
+        opacity=0.85,
     )
-    st.altair_chart(chart, use_container_width=True)
+    figure.update_traces(hovertemplate="Error %{x:.0f} kcal/kg<br>%{y} rows<extra></extra>")
+    _style(
+        figure,
+        y_title="Number of rows",
+        x_title="Prediction error (kcal/kg)  -  negative = under-predicted",
+    )
+    # A line at zero error: without it, a distribution sitting slightly off
+    # centre looks centred.
+    figure.add_vline(x=0, line=dict(color=ACTUAL_COLOUR, dash="dash", width=2))
+    st.plotly_chart(figure, use_container_width=True)
 
     _explain(
         shows=(
