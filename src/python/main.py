@@ -12,12 +12,19 @@ from sklearn.model_selection import train_test_split
 from src.python.load_data.clickhouse import ClickHouseConfig, PlantDataLoader
 
 features = [
-    "f_k_coal_tput",
-    "p_k_torque",
     "g_k_pyro_temp",
+    "p_k_torque",
     "p_c_grate_speed",
     "g_ph_cy4_gol_temp",
     "g_ph_cy3_gol_temp",
+    "g_ph_gol_temp",
+    "f_k_coal_tput",
+    "g_pc_pyro_temp",
+    "g_pc_wall_scc_temp4",
+    "s_ph_sil_cao",
+    "s_ph_sil_al2o3",
+    "s_ph_sil_fe2o3",
+    "s_ph_sil_sio2"
 ]
 target = "p_k_power"
 columns_to_load = features + [target]

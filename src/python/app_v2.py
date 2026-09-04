@@ -38,6 +38,7 @@ PREDICTED_COLOUR = "#E8833A"
 # The sensor names in the database are short and cryptic. These are the same
 # readings in words, so the picker means something to someone who has never
 # seen a cement plant.
+
 FEATURE_LABELS = {
     "f_k_coal_tput": "Coal going into the kiln",
     "p_k_torque": "How hard the kiln motor is working",
@@ -45,6 +46,13 @@ FEATURE_LABELS = {
     "p_c_grate_speed": "Speed of the cooler grate",
     "g_ph_cy4_gol_temp": "Preheater temperature (cyclone 4)",
     "g_ph_cy3_gol_temp": "Preheater temperature (cyclone 3)",
+    "g_ph_gol_temp": "Overall preheater temperature",
+    "g_pc_pyro_temp": "Pyroprocessing temperature",
+    "g_pc_wall_scc_temp4": "Temperature of the pyroprocessing wall (section 4)",
+    "s_ph_sil_cao": "Calcium oxide (CaO) in the preheater material",
+    "s_ph_sil_al2o3": "Aluminium oxide (Al₂O₃) in the preheater material",
+    "s_ph_sil_fe2o3": "Iron oxide (Fe₂O₃) in the preheater material",
+    "s_ph_sil_sio2": "Silicon dioxide (SiO₂) in the preheater material",
 }
 
 
@@ -144,8 +152,8 @@ def plot_line(actuals, predictions):
 
     fig, ax = plt.subplots(figsize=CHART_FIGSIZE)
     x = range(len(actuals))
-    ax.plot(x, actuals, label="What really happened", color=ACTUAL_COLOUR, linewidth=1)
-    ax.plot(x, predictions, label="What the model guessed", color=PREDICTED_COLOUR, linewidth=1)
+    ax.plot(x, actuals, label="What really happened", color=ACTUAL_COLOUR, linewidth=1, alpha=0.5)
+    ax.plot(x, predictions, label="What the model guessed", color=PREDICTED_COLOUR, linewidth=1, alpha=0.5)
     ax.set_xlabel("Test reading (in time order)")
     ax.set_ylabel("Energy use (kcal/kg)")
     ax.legend()
@@ -334,6 +342,30 @@ def main() -> None:
         f"({', '.join(describe_feature(f).lower() for f in selected_features)}). "
         f"{len(actuals):,} readings were held back for testing "
         f"({test_size:.0%} of the data)."
+    )
+    st.subheader("Frequently Asked Questions")
+
+    with st.expander("What is this dashboard about?"):
+        st.write(
+                "The dashboard uses a machine learning model to make predictions "
+        "based on the available data. The model is trained using historical "
+        "data and then tested on data that it has not seen during training."
+    )
+
+    with st.expander("What machine learning model is being used?"):
+        st.write(
+                "The dashboard uses a machine learning model to make predictions "
+        "based on the available data. The model is trained using historical "
+        "data and then tested on data that it has not seen during training."
+    )
+
+    with st.expander("How could the model be improved?"):
+        st.write(
+            "The model could potentially be improved by using additional or "
+        "better-quality features, collecting more training data, handling "
+        "outliers, tuning the model's parameters, or trying different "
+        "machine learning algorithms. Comparing several models could also "
+        "help identify which approach performs best."
     )
 
 

@@ -68,14 +68,16 @@ def plot_line(actuals, predictions):
         actuals,
         label='Actual values',
         color='blue',
-        linewidth=1
+        linewidth=1,
+        alpha=0.5
     )
     ax.plot(
         x,
         predictions,
         label='Predicted values',
         color='red',
-        linewidth=1
+        linewidth=1,
+        alpha=0.5
     )
     ax.set_xlabel('Test sample')
     ax.set_ylabel('Values')
@@ -166,6 +168,6 @@ def main():
     with col3:
         st.metric(
             "RMSE",
-            f"{rmse:.2f}x kcal/kgx"
+            f"{rmse:.2f}x kcal/kg"
         )
 main()
