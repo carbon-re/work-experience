@@ -56,8 +56,9 @@ def sliced_data(data: pd.DataFrame) -> list[pd.DataFrame]:
 def train_model(
     data: pd.DataFrame,
     test_size: float = 0.2,
+    selected_features: list[str] | None = None,
 ) -> tuple[LinearRegression, pd.DataFrame, pd.Series]:
-    X = data[features]
+    X = data[selected_features or features]
     y = data[target]
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, shuffle=False)
     model = LinearRegression()

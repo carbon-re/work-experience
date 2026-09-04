@@ -24,6 +24,7 @@ from src.python.main import (
     analysisData,
     cleaning,
     data_load,
+    features,
     sliced_data,
     train_model,
 )
@@ -33,6 +34,24 @@ from src.python.main import (
 CHART_FIGSIZE = (7, 4)
 ACTUAL_COLOUR = "#5A6B7B"
 PREDICTED_COLOUR = "#E8833A"
+
+# The sensor names in the database are short and cryptic. These are the same
+# readings in words, so the picker means something to someone who has never
+# seen a cement plant.
+FEATURE_LABELS = {
+    "f_k_coal_tput": "Coal going into the kiln",
+    "p_k_torque": "How hard the kiln motor is working",
+    "g_k_pyro_temp": "Temperature inside the kiln",
+    "p_c_grate_speed": "Speed of the cooler grate",
+    "g_ph_cy4_gol_temp": "Preheater temperature (cyclone 4)",
+    "g_ph_cy3_gol_temp": "Preheater temperature (cyclone 3)",
+}
+
+
+def describe_feature(name: str) -> str:
+    """Friendly name for a sensor, falling back to the raw one."""
+    return FEATURE_LABELS.get(name, name)
+
 
 st.set_page_config(
     page_title="Predicting a cement plant's energy use",
@@ -59,13 +78,17 @@ def load_plant_data(start: dt.datetime, end: dt.datetime) -> pd.DataFrame:
 
 
 @st.cache_data(show_spinner="Training a model for each month…")
-def train_monthly_models(data: pd.DataFrame, test_size: float) -> tuple[list, list]:
+def train_monthly_models(
+    data: pd.DataFrame, test_size: float, selected_features: list[str]
+) -> tuple[list, list]:
     """One model per calendar month, so we can see error drift over the year."""
     months = []
     maes = []
 
     for month_df in sliced_data(data.copy()):
-        model, x_test, y_test = train_model(month_df, test_size=test_size)
+        model, x_test, y_test = train_model(
+            month_df, test_size=test_size, selected_features=selected_features
+        )
         _, mae = analysisData(x_test, y_test, model=model)
         months.append(month_df["month"].iloc[0].to_timestamp())
         maes.append(mae)
@@ -74,9 +97,13 @@ def train_monthly_models(data: pd.DataFrame, test_size: float) -> tuple[list, li
 
 
 @st.cache_data(show_spinner="Training the overall model…")
-def train_overall_model(data: pd.DataFrame, test_size: float) -> tuple[pd.Series, pd.Series]:
+def train_overall_model(
+    data: pd.DataFrame, test_size: float, selected_features: list[str]
+) -> tuple[pd.Series, pd.Series]:
     """One model across the whole period, for the actual-vs-predicted line."""
-    model, x_test, y_test = train_model(data, test_size=test_size)
+    model, x_test, y_test = train_model(
+        data, test_size=test_size, selected_features=selected_features
+    )
     predictions, _ = analysisData(x_test, y_test, model=model)
     return y_test, predictions
 
@@ -131,7 +158,7 @@ def plot_line(actuals, predictions):
 # ----------------------------------------------------------------------
 
 
-def show_header_and_controls() -> tuple[dt.date, dt.date, float]:
+def show_header_and_controls() -> tuple[dt.date, dt.date, float, list[str]]:
     """Title on the left, the controls boxed off in the top-right corner."""
     heading, controls = st.columns([2, 1])
 
@@ -160,6 +187,18 @@ def show_header_and_controls() -> tuple[dt.date, dt.date, float]:
                 format="YYYY-MM-DD",
             ) or (None, None)
 
+            selected_features = st.multiselect(
+                "Which sensor readings can the model use?",
+                options=features,
+                default=features,
+                format_func=describe_feature,
+            )
+            st.caption(
+                "These are the clues the model is allowed to look at. Take some "
+                "away and see whether it can still do the job — if the scores "
+                "barely move, that reading was not telling it much."
+            )
+
             test_percent = st.slider(
                 "How much data to hide from the model, for testing",
                 min_value=10,
@@ -173,7 +212,7 @@ def show_header_and_controls() -> tuple[dt.date, dt.date, float]:
                 "check its guesses against readings it has never met."
             )
 
-    return start_date, end_date, test_percent / 100
+    return start_date, end_date, test_percent / 100, selected_features
 
 
 def show_metrics(r2: float, mae: float, rmse: float) -> None:
@@ -236,10 +275,17 @@ def show_charts(months, maes, actuals, predictions) -> None:
 
 
 def main() -> None:
-    start_date, end_date, test_size = show_header_and_controls()
+    start_date, end_date, test_size, selected_features = show_header_and_controls()
 
     if start_date is None or end_date is None:
         st.info("Pick a start date and an end date to get going.")
+        return
+
+    if not selected_features:
+        st.warning(
+            "The model needs at least one sensor reading to work from. Tick a "
+            "box under **Which sensor readings can the model use?** to carry on."
+        )
         return
 
     if start_date >= end_date:
@@ -271,19 +317,21 @@ def main() -> None:
         )
         return
 
-    actuals, predictions = train_overall_model(data, test_size)
+    actuals, predictions = train_overall_model(data, test_size, selected_features)
     r2, mae, rmse = calculate_metrics(actuals, predictions)
 
     show_metrics(r2, mae, rmse)
 
     st.divider()
 
-    months, maes = train_monthly_models(data, test_size)
+    months, maes = train_monthly_models(data, test_size, selected_features)
     show_charts(months, maes, actuals, predictions)
 
     st.divider()
     st.caption(
-        f"Trained on readings from {start_date} to {end_date}. "
+        f"Trained on readings from {start_date} to {end_date}, using "
+        f"{len(selected_features)} of {len(features)} sensor readings "
+        f"({', '.join(describe_feature(f).lower() for f in selected_features)}). "
         f"{len(actuals):,} readings were held back for testing "
         f"({test_size:.0%} of the data)."
     )
