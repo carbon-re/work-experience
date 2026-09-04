@@ -65,6 +65,7 @@ def analysisData(X_test, y_test, model) -> pd.DataFrame:
     print(f"R squared: {r2_score(y_test, predictions):.2f}")
     print(type(predictions))
     print(len(predictions))
+
     # plt.scatter(data["f_k_coal_tput"], data["p_k_power"])
     # plt.xlabel("f_k_coal_tput")
     # plt.ylabel("p_k_power")
