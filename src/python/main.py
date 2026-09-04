@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 
 # TODO: load the plant data.
 #
-from src.python.load_data.clickhouse import ClickHouseConfig, PlantDataLoader
+from src.python.load_data import fake_data
 
 features = [
     "g_k_pyro_temp",
@@ -24,7 +24,7 @@ features = [
     "s_ph_sil_cao",
     "s_ph_sil_al2o3",
     "s_ph_sil_fe2o3",
-    "s_ph_sil_sio2"
+    "s_ph_sil_sio2",
 ]
 target = "p_k_power"
 columns_to_load = features + [target]
@@ -38,6 +38,33 @@ def data_load(
     start: dt.datetime = DEFAULT_START,
     end: dt.datetime = DEFAULT_END,
 ) -> pd.DataFrame:
+    """Load plant data for the given period.
+
+    This returns **generated fake data**, so it runs on any machine with no
+    password and no network connection. The numbers are invented, but the
+    columns, units and the relationships between them are realistic enough
+    to train a model on.
+
+    The real plant data lives in ClickHouse -- see `load_from_clickhouse`
+    below for how that was fetched.
+    """
+    return fake_data.generate_plant_data(start=start, end=end)
+
+
+def load_from_clickhouse(
+    start: dt.datetime = DEFAULT_START,
+    end: dt.datetime = DEFAULT_END,
+) -> pd.DataFrame:
+    """Load the real plant data out of ClickHouse.
+
+    Kept for reference: this is what `data_load` used to do. It needs the
+    `CLICKHOUSE_*` environment variables set and access to the database.
+
+    The import sits inside the function on purpose: that way you do not need
+    `clickhouse-connect` installed just to run the dashboard on fake data.
+    """
+    from src.python.load_data.clickhouse import ClickHouseConfig, PlantDataLoader
+
     loader = PlantDataLoader(ClickHouseConfig.from_environment())
     data = loader.load(
         table="mapped",

@@ -229,6 +229,130 @@ streamlit_dashboard(name="my_dashboard", entrypoint="my_dashboard/app.py")
 why `pants run` knows how to start a Streamlit app. Run it with
 `pants run src/python/dashboards:my_dashboard`.
 
+## Running the dashboard on Windows
+
+Pants does not run on Windows, but the dashboard does not need it. You can run
+`app_v2.py` with plain Python and pip.
+
+You need **no passwords and no internet connection** for this — the plant data
+is generated on your machine (see [Where the data comes from](#where-the-data-comes-from)
+below).
+
+### One-time setup
+
+**Step 1 — install Python.** Get it from
+[python.org/downloads](https://www.python.org/downloads/) and pick Python 3.11
+or newer. On the first screen of the installer, tick **"Add python.exe to
+PATH"** before clicking Install. That box is easy to miss and everything else
+fails without it.
+
+Open a new PowerShell window and check it worked:
+
+```powershell
+python --version
+```
+
+If that prints a version number, you are good. If Windows opens the Microsoft
+Store instead, the PATH box was not ticked — re-run the installer and choose
+"Modify".
+
+**Step 2 — get the code.** If you have git:
+
+```powershell
+git clone https://github.com/carbon-re/work-experience
+cd work-experience
+```
+
+No git? Download the ZIP from the GitHub page ("Code" → "Download ZIP"),
+unzip it, then `cd` into the folder.
+
+**Step 3 — make a virtual environment.** This keeps the project's packages
+separate from the rest of your computer, which is what pants was doing for you
+on the work laptop:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+Your prompt should now start with `(.venv)`.
+
+If PowerShell refuses with a message about *execution policies*, it is blocking
+scripts by default. Allow them for your user, then activate again:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+.\.venv\Scripts\Activate.ps1
+```
+
+**Step 4 — install the packages:**
+
+```powershell
+pip install streamlit pandas numpy matplotlib scikit-learn
+```
+
+This takes a couple of minutes the first time.
+
+### Running it
+
+With `(.venv)` showing in your prompt, from the top-level `work-experience`
+folder:
+
+```powershell
+$env:PYTHONPATH = "."
+streamlit run src\python\app_v2.py
+```
+
+Your browser should open at `http://localhost:8501`. If it does not, open that
+address yourself.
+
+Press `Ctrl+C` in the terminal to stop it.
+
+### Every time after that
+
+The virtual environment is already built, so there are only three steps:
+
+```powershell
+cd work-experience
+.\.venv\Scripts\Activate.ps1
+$env:PYTHONPATH = "."
+streamlit run src\python\app_v2.py
+```
+
+`PYTHONPATH` tells Python to treat the current folder as the top of the
+project, so that `from src.python...` imports work. It resets when you close
+the window, which is why it is in the list every time.
+
+### If something goes wrong
+
+| What you see | What it means |
+| ------------ | ------------- |
+| `python: command not found` or the Store opens | "Add python.exe to PATH" was not ticked. Re-run the installer, choose "Modify", tick it. |
+| `ModuleNotFoundError: No module named 'src'` | `PYTHONPATH` is not set, or you are in the wrong folder. Run it from the top-level `work-experience` folder. |
+| `ModuleNotFoundError: No module named 'streamlit'` | The virtual environment is not active. Look for `(.venv)` in your prompt. |
+| `running scripts is disabled on this system` | See the `Set-ExecutionPolicy` command in Step 3. |
+| `streamlit: command not found` | Same as above — activate the virtual environment first. |
+
+## Where the data comes from
+
+`data_load()` in `src/python/main.py` returns **generated fake data**, made by
+`src/python/load_data/fake_data.py`. Nothing is downloaded and no password is
+needed, which is why this works on any machine.
+
+The numbers are invented, but the *structure* is real: the same column names as
+the plant database, plausible values and units for each sensor, a seasonal
+drift across the year, and genuine relationships between the sensors and the
+thing being predicted. So a model trained on it really does learn something —
+you should see an R² around 0.9.
+
+It uses a fixed random seed, so you get the same data every run. A score you
+see today will be the same tomorrow, which makes it much easier to tell whether
+a change you made actually improved anything.
+
+The real plant data lives in ClickHouse. The code that loaded it is still there
+as `load_from_clickhouse()` in `main.py`, for reference — it needs credentials
+and database access that are no longer set up.
+
 ## Layout
 
 ```text
@@ -255,8 +379,12 @@ pants generate-lockfiles --resolve=python-default
 
 ## Connecting to ClickHouse
 
-The data loader reads credentials from environment variables, so that no
-passwords are ever committed to git:
+**You do not need this any more** — the project now uses generated data, as
+described in [Where the data comes from](#where-the-data-comes-from). This is
+kept as a note on how it worked.
+
+The loader read its credentials from environment variables, so that no
+passwords were ever committed to git:
 
 ```bash
 export CLICKHOUSE_HOST=...
@@ -265,5 +393,5 @@ export CLICKHOUSE_PASSWORD=...
 export CLICKHOUSE_DATABASE=...
 ```
 
-Never put these in a file that git tracks. `.env` is git-ignored if you prefer
-to keep them in a file.
+That is a habit worth keeping for any project: secrets go in environment
+variables or a git-ignored file, never in a file git tracks.
