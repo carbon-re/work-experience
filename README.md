@@ -9,6 +9,9 @@ SHC is the energy used to make one unit of clinker. If a plant makes 1 ton
 (1000 kg) of clinker using 1,000,000 kcal of energy, its SHC is 1000 kcal/kg.
 Lower is better: less fuel burnt means less CO2.
 
+At the end of the week there is a short review session where you talk through
+what you built. See [REVIEWME.md](REVIEWME.md) to prepare for it.
+
 ## The plan
 
 | Phase | Goal                                                     |

@@ -1,6 +1,8 @@
+import datetime as dt
+
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
-from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, r2_score, root_mean_squared_error
 from sklearn.model_selection import train_test_split
@@ -8,7 +10,6 @@ from sklearn.model_selection import train_test_split
 # TODO: load the plant data.
 #
 from src.python.load_data.clickhouse import ClickHouseConfig, PlantDataLoader
-import datetime as dt
 
 features = [
     "f_k_coal_tput",
@@ -22,13 +23,20 @@ target = "p_k_power"
 columns_to_load = features + [target]
 
 
-def data_load():
+DEFAULT_START = dt.datetime(year=2022, month=1, day=1)
+DEFAULT_END = dt.datetime(year=2023, month=1, day=1)
+
+
+def data_load(
+    start: dt.datetime = DEFAULT_START,
+    end: dt.datetime = DEFAULT_END,
+) -> pd.DataFrame:
     loader = PlantDataLoader(ClickHouseConfig.from_environment())
     data = loader.load(
         table="mapped",
         features=columns_to_load,
-        start=dt.datetime(year=2022, month=1, day=1),
-        end=dt.datetime(year=2023, month=1, day=1),
+        start=start,
+        end=end,
     )
 
     return data
@@ -45,10 +53,13 @@ def sliced_data(data: pd.DataFrame) -> list[pd.DataFrame]:
     return list_of_dataframes
 
 
-def train_model(data: pd.DataFrame) -> LinearRegression:
+def train_model(
+    data: pd.DataFrame,
+    test_size: float = 0.2,
+) -> tuple[LinearRegression, pd.DataFrame, pd.Series]:
     X = data[features]
     y = data[target]
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, shuffle=False)
     model = LinearRegression()
     model.fit(X_train, y_train)
     print(X_train.head())
@@ -57,7 +68,7 @@ def train_model(data: pd.DataFrame) -> LinearRegression:
     return model, X_test, y_test
 
 
-def analysisData(X_test, y_test, model) -> pd.DataFrame:
+def analysisData(X_test, y_test, model) -> tuple[np.ndarray, float]:
     predictions = model.predict(X_test)
     MAE = mean_absolute_error(y_test, predictions)
     print(f"Mean absolute error: {MAE} kcal/kg")
